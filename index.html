@@ -1,1 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soobi Runner Game</title>
+    <style>
+        * { margin: 0; padding: 0; }
+        body { text-align: center; background: white; font-family: Arial, sans-serif; }
+        canvas { background: lightgray; display: block; margin: 20px auto; }
+        #message { font-size: 24px; font-weight: bold; display: none; }
+    </style>
+</head>
+<body>
+    <h1>Soobi Runner</h1>
+    <canvas id="gameCanvas" width="800" height="300"></canvas>
+    <p id="message">Happy Birthday SOOBI!</p>
+    
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
 
+        let soobi = { x: 50, y: 200, width: 40, height: 40, velocityY: 0, jumping: false };
+        let obstacles = [];
+        let treats = [];
+        let score = 0;
+        let gameOver = false;
+        let gravity = 0.6;
+        let jumpStrength = -12;
+        let speed = 5;
+        let animationFrame = 0;
+
+        function drawSoobi() {
+            ctx.fillStyle = "black";
+            ctx.fillRect(soobi.x, soobi.y, soobi.width, soobi.height);
+        }
+
+        function drawObstacles() {
+            ctx.fillStyle = "red";
+            obstacles.forEach(obs => ctx.fillRect(obs.x, obs.y, obs.width, obs.height));
+        }
+
+        function drawTreats() {
+            ctx.fillStyle = "gold";
+            treats.forEach(treat => ctx.fillRect(treat.x, treat.y, 10, 10));
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawSoobi();
+            drawObstacles();
+            drawTreats();
+
+            // Smooth jumping physics
+            soobi.y += soobi.velocityY;
+            soobi.velocityY += gravity;
+            if (soobi.y >= 200) {
+                soobi.y = 200;
+                soobi.jumping = false;
+            }
+
+            // Smooth obstacle movement
+            obstacles.forEach(obs => {
+                obs.x -= speed;
+                if (obs.x + obs.width < 0) obs.x = canvas.width + Math.random() * 200;
+                if (soobi.x < obs.x + obs.width && soobi.x + soobi.width > obs.x && soobi.y + soobi.height > obs.y) {
+                    gameOver = true;
+                    alert("Game Over!");
+                    location.reload();
+                }
+            });
+
+            // Smooth treat movement
+            treats.forEach((treat, index) => {
+                treat.x -= speed;
+                if (treat.x + 10 < 0) treat.x = canvas.width + Math.random() * 500;
+                if (soobi.x < treat.x + 10 && soobi.x + soobi.width > treat.x && soobi.y + soobi.height > treat.y) {
+                    score++;
+                    treats.splice(index, 1);
+                }
+            });
+
+            // Score display
+            ctx.fillStyle = "black";
+            ctx.fillText("Score: " + score, 700, 20);
+
+            if (score >= 50) document.getElementById("message").style.display = "block";
+
+            animationFrame++;
+            requestAnimationFrame(update);
+        }
+
+        function jump() {
+            if (!soobi.jumping) {
+                soobi.velocityY = jumpStrength;
+                soobi.jumping = true;
+            }
+        }
+
+        window.addEventListener("keydown", (e) => { if (e.code === "Space") jump(); });
+        window.addEventListener("click", jump);
+
+        for (let i = 0; i < 3; i++) obstacles.push({ x: 400 + i * 300, y: 240, width: 30, height: 30 });
+        for (let i = 0; i < 5; i++) treats.push({ x: 500 + i * 400, y: 230 });
+
+        update();
+    </script>
+</body>
+</html>
