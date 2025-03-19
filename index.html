@@ -2,175 +2,238 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Soobi Runner</title>
+  <title>Soobi Runner - Celebratory Edition</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
   <style>
-    * { margin: 0; padding: 0; }
-    body { text-align: center; background: white; font-family: sans-serif; }
-    canvas { background: white; display: block; margin: 20px auto; border: 1px solid #ddd; }
-    #score { font-size: 20px; margin: 10px; color: black; }
-    #message { font-size: 24px; font-weight: bold; color: black; display: none; }
+    body { margin: 0; padding: 0; background: #fff; }
+    canvas { display: block; margin: 0 auto; }
   </style>
 </head>
 <body>
-  <h1 style="color:black;">Soobi Runner</h1>
-  <canvas id="gameCanvas" width="800" height="200"></canvas>
-  <div id="score">Treats: 0</div>
-  <div id="message">Happy Birthday SOOBI!</div>
+<script>
+// Phaser configuration
+const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 200,
+    backgroundColor: '#fff',
+    physics: {
+        default: 'arcade',
+        arcade: { gravity: { y: 1600 }, debug: false }
+    },
+    scene: { preload: preload, create: create, update: update }
+};
 
-  <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+let game = new Phaser.Game(config);
+let background, soobi, ground, obstacles, treats;
+let score = 0;
+let scoreText, messageText;
+let gameOver = false;
+let cursors;
+let bgSpeed = 2; // Background scroll speed
+let confettiEmitter;
 
-    // Game settings: tuned for smooth gameplay
-    let treatCount = 0;
-    let gameOver = false;
-    const gravity = 0.8;
-    const groundY = 150;
-    const speed = 6;
-
-    // Soobi: represented as a black rectangle (silhouette)
-    const soobi = {
-      x: 50,
-      y: groundY - 40,
-      width: 40,
-      height: 40,
-      velocityY: 0,
-      jumping: false
-    };
-
-    // Arrays for obstacles and treats
-    let obstacles = [];
-    let treats = [];
-
-    // Spawn an obstacle (black block resembling a cactus)
-    function spawnObstacle() {
-      const obs = {
-        x: canvas.width,
-        y: groundY - 20, // placed on the ground
-        width: 20,
-        height: 20
-      };
-      obstacles.push(obs);
+function preload() {
+    // Create a detailed park background procedurally.
+    let parkGraphics = this.make.graphics({ add: false });
+    // Draw a green field.
+    parkGraphics.fillStyle(0x66cc66, 1);
+    parkGraphics.fillRect(0, 0, 800, 200);
+    // Draw some simple "trees" along the bottom.
+    parkGraphics.fillStyle(0x339933, 1);
+    for (let i = 0; i < 10; i++) {
+      let x = i * 80 + 10;
+      parkGraphics.fillRect(x, 120, 10, 80);
     }
+    parkGraphics.generateTexture('park', 800, 200);
+    parkGraphics.destroy();
 
-    // Spawn a treat: a 🍗 chicken leg piece using the emoji.
-    function spawnTreat() {
-      const treat = {
-        x: canvas.width,
-        y: groundY - 30,
-        size: 24  // emoji drawn with 24px font size
-      };
-      treats.push(treat);
+    // Generate two frames for a simple running dog.
+    let dogGraphics = this.make.graphics({ add: false });
+    // Frame 1: Dog body and head.
+    dogGraphics.fillStyle(0x000000, 1);
+    dogGraphics.fillRect(5, 15, 20, 10); // body
+    dogGraphics.fillCircle(20, 12, 5);    // head
+    dogGraphics.generateTexture('dog1', 30, 30);
+    dogGraphics.clear();
+    // Frame 2: Slight head movement for running effect.
+    dogGraphics.fillStyle(0x000000, 1);
+    dogGraphics.fillRect(5, 15, 20, 10); // body
+    dogGraphics.fillCircle(20, 14, 5);    // head shifted down
+    dogGraphics.generateTexture('dog2', 30, 30);
+    dogGraphics.destroy();
+
+    // Generate a hurdle texture (detailed hurdle).
+    let hurdleGraphics = this.make.graphics({ add: false });
+    hurdleGraphics.fillStyle(0x000000, 1);
+    // Draw a hurdle: a rectangle with a curved top (simulate with a semicircle).
+    hurdleGraphics.fillRect(0, 10, 30, 20);
+    hurdleGraphics.fillCircle(15, 10, 15);
+    hurdleGraphics.generateTexture('hurdle', 30, 30);
+    hurdleGraphics.destroy();
+
+    // Generate a confetti texture – a small square.
+    let confettiGraphics = this.make.graphics({ add: false });
+    confettiGraphics.fillStyle(0xffffff, 1);
+    confettiGraphics.fillRect(0, 0, 4, 4);
+    confettiGraphics.generateTexture('confetti', 4, 4);
+    confettiGraphics.destroy();
+}
+
+function create() {
+    // Create a scrolling background using a tileSprite.
+    background = this.add.tileSprite(400, 100, 800, 200, 'park');
+    
+    // Create an invisible ground for collisions.
+    ground = this.add.rectangle(400, 150, 800, 5, 0x000000);
+    this.physics.add.existing(ground, true);
+
+    // Create the animated dog (Soobi) using the generated frames.
+    soobi = this.physics.add.sprite(50, 100, 'dog1');
+    soobi.setCollideWorldBounds(true);
+    soobi.body.setSize(30, 30);
+    soobi.setGravityY(1600);
+    
+    // Create running animation using the two dog frames.
+    this.anims.create({
+        key: 'run',
+        frames: [
+            { key: 'dog1' },
+            { key: 'dog2' }
+        ],
+        frameRate: 10,
+        repeat: -1
+    });
+    soobi.anims.play('run', true);
+    
+    // Enable collision between Soobi and the ground.
+    this.physics.add.collider(soobi, ground);
+    
+    // Create groups for hurdles (obstacles) and treats.
+    obstacles = this.physics.add.group();
+    treats = this.physics.add.group();
+    
+    // Spawn hurdles every 1500ms.
+    this.time.addEvent({
+        delay: 1500,
+        callback: spawnObstacle,
+        callbackScope: this,
+        loop: true
+    });
+    
+    // Spawn treats every 2000ms.
+    this.time.addEvent({
+        delay: 2000,
+        callback: spawnTreat,
+        callbackScope: this,
+        loop: true
+    });
+    
+    // Set up score text.
+    scoreText = this.add.text(600, 10, 'Treats: 0', { fontSize: '20px', fill: '#000' });
+    // Birthday message (hidden initially).
+    messageText = this.add.text(200, 80, 'Happy Birthday SOOBI!', { fontSize: '24px', fill: '#000' });
+    messageText.visible = false;
+    
+    // Set up collisions: Soobi with hurdles and treats.
+    this.physics.add.overlap(soobi, obstacles, hitObstacle, null, this);
+    this.physics.add.overlap(soobi, treats, collectTreat, null, this);
+    
+    // Input: SPACE key for jump; pointer (for mobile) also triggers jump.
+    cursors = this.input.keyboard.createCursorKeys();
+    this.input.on('pointerdown', jump, this);
+}
+
+function update() {
+    if (gameOver) return;
+    
+    // Scroll the background.
+    background.tilePositionX += bgSpeed;
+    
+    // Trigger jump with SPACE key if on the ground.
+    if (cursors.space.isDown && soobi.body.touching.down) {
+        jump.call(this);
     }
-
-    // Spawning intervals: adjust as desired for gameplay pacing.
-    setInterval(() => { if (!gameOver) spawnObstacle(); }, 2000);
-    setInterval(() => { if (!gameOver) spawnTreat(); }, 2500);
-
-    // Jump function: triggers on SPACE key, touch, or click.
-    function jump() {
-      if (!soobi.jumping) {
-        soobi.velocityY = -15;
-        soobi.jumping = true;
-      }
-    }
-
-    // Listen for controls (keyboard, touch, click)
-    document.addEventListener("keydown", (e) => { if (e.code === "Space") jump(); });
-    document.addEventListener("touchstart", jump);
-    document.addEventListener("click", jump);
-
-    // Update game objects and physics
-    function update() {
-      if (gameOver) return;
-
-      // Update Soobi's position with gravity physics
-      soobi.y += soobi.velocityY;
-      soobi.velocityY += gravity;
-      if (soobi.y >= groundY - soobi.height) {
-        soobi.y = groundY - soobi.height;
-        soobi.jumping = false;
-      }
-
-      // Move obstacles and check collisions
-      for (let i = obstacles.length - 1; i >= 0; i--) {
-        const obs = obstacles[i];
-        obs.x -= speed;
-        // Collision detection (simple AABB)
-        if (
-          soobi.x < obs.x + obs.width &&
-          soobi.x + soobi.width > obs.x &&
-          soobi.y < obs.y + obs.height &&
-          soobi.y + soobi.height > obs.y
-        ) {
-          gameOver = true;
-          alert("Game Over!");
-          location.reload();
+    
+    // Move hurdles left.
+    obstacles.children.iterate(function(child) {
+        if (child) {
+            child.x -= 6;
+            if (child.x < -child.width) child.destroy();
         }
-        if (obs.x + obs.width < 0) obstacles.splice(i, 1);
-      }
-
-      // Move treats and check for collection
-      for (let i = treats.length - 1; i >= 0; i--) {
-        const treat = treats[i];
-        treat.x -= speed;
-        if (
-          soobi.x < treat.x + treat.size &&
-          soobi.x + soobi.width > treat.x &&
-          soobi.y < treat.y + treat.size &&
-          soobi.y + soobi.height > treat.y
-        ) {
-          treatCount++;
-          document.getElementById("score").textContent = "Treats: " + treatCount;
-          treats.splice(i, 1);
-          if (treatCount >= 50) {
-            document.getElementById("message").style.display = "block";
-          }
+    });
+    
+    // Move treats left.
+    treats.children.iterate(function(child) {
+        if (child) {
+            child.x -= 6;
+            if (child.x < -child.width) child.destroy();
         }
-        if (treat.x + treat.size < 0) treats.splice(i, 1);
-      }
+    });
+}
+
+function jump() {
+    if (soobi.body.touching.down) {
+        soobi.setVelocityY(-500);
     }
+}
 
-    // Draw the game objects on the canvas
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+function spawnObstacle() {
+    // Create a hurdle obstacle using the generated texture.
+    let obstacle = obstacles.create(800, 140, 'hurdle');
+    obstacle.body.setAllowGravity(false);
+    obstacle.setImmovable(true);
+}
 
-      // Draw the ground line
-      ctx.beginPath();
-      ctx.moveTo(0, groundY);
-      ctx.lineTo(canvas.width, groundY);
-      ctx.strokeStyle = "black";
-      ctx.stroke();
+function spawnTreat() {
+    // Spawn a treat (🍗 emoji) at a random vertical position.
+    let treatY = Phaser.Math.Between(80, 140);
+    let treat = this.add.text(800, treatY, '🍗', { fontSize: '24px', fill: '#000' });
+    this.physics.add.existing(treat);
+    treat.body.setAllowGravity(false);
+    treat.setData('isTreat', true);
+    treats.add(treat);
+}
 
-      // Draw Soobi (the dog)
-      ctx.fillStyle = "black";
-      ctx.fillRect(soobi.x, soobi.y, soobi.width, soobi.height);
+function hitObstacle(soobi, obstacle) {
+    gameOver = true;
+    this.physics.pause();
+    soobi.setTint(0xff0000);
+    alert("Game Over!");
+    this.scene.restart();
+}
 
-      // Draw obstacles
-      ctx.fillStyle = "black";
-      obstacles.forEach(obs => {
-        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-      });
-
-      // Draw treats as the 🍗 emoji
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.font = "24px sans-serif";
-      treats.forEach(treat => {
-        ctx.fillText("🍗", treat.x + treat.size / 2, treat.y + treat.size / 2);
-      });
+function collectTreat(soobi, treat) {
+    if (treat.getData('isTreat')) {
+        treat.destroy();
+        score++;
+        scoreText.setText('Treats: ' + score);
+        // End the game after 50 treats and celebrate.
+        if (score >= 50) {
+            gameOver = true;
+            messageText.visible = true;
+            this.physics.pause();
+            createConfetti.call(this);
+        }
     }
+}
 
-    // The game loop, using requestAnimationFrame for smooth animation
-    function gameLoop() {
-      update();
-      draw();
-      requestAnimationFrame(gameLoop);
-    }
-
-    // Start the game loop
-    gameLoop();
-  </script>
+function createConfetti() {
+    // Create a particle emitter for confetti using the generated 'confetti' texture.
+    let particles = this.add.particles('confetti');
+    confettiEmitter = particles.createEmitter({
+        x: { min: 0, max: 800 },
+        y: 0,
+        speedX: { min: -100, max: 100 },
+        speedY: { min: 200, max: 400 },
+        lifespan: 3000,
+        quantity: 5,
+        scale: { start: 1, end: 0 },
+        blendMode: 'NORMAL',
+        tint: [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff]
+    });
+    // Confetti will continue to fall indefinitely.
+}
+</script>
 </body>
 </html>
