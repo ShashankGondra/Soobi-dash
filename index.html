@@ -37,7 +37,7 @@ let confettiEmitter;
 function preload() {
   // --- Create the dog silhouette (Soobi) with two frames for running animation ---
   let dogGraphics = this.make.graphics({ add: false });
-  // Frame 1:
+  // Frame 1 (without tail):
   dogGraphics.fillStyle(0x000000, 1);
   dogGraphics.fillRect(10, 20, 30, 20);         // body
   dogGraphics.fillCircle(48, 30, 8);              // head
@@ -47,10 +47,11 @@ function preload() {
   dogGraphics.lineTo(55, 20);
   dogGraphics.closePath();
   dogGraphics.fillPath();
-  dogGraphics.fillRect(0, 28, 10, 4);             // tail
+  // No tail drawn.
   dogGraphics.generateTexture('dog1', 60, 50);
   dogGraphics.clear();
-  // Frame 2: Variation (head slightly lower)
+  
+  // Frame 2 (without tail; head slightly lower):
   dogGraphics.fillStyle(0x000000, 1);
   dogGraphics.fillRect(10, 20, 30, 20);
   dogGraphics.fillCircle(48, 32, 8);
@@ -60,7 +61,7 @@ function preload() {
   dogGraphics.lineTo(55, 20);
   dogGraphics.closePath();
   dogGraphics.fillPath();
-  dogGraphics.fillRect(0, 28, 10, 4);
+  // No tail drawn.
   dogGraphics.generateTexture('dog2', 60, 50);
   dogGraphics.destroy();
 
@@ -177,7 +178,8 @@ function update() {
 
 function jump() {
   if (soobi.body.touching.down) {
-    soobi.setVelocityY(-500);
+    // Increase jump velocity for a higher jump.
+    soobi.setVelocityY(-700);
   }
 }
 
@@ -206,6 +208,7 @@ function spawnTreat() {
   let treat = this.add.text(800, 140, '🍗', { fontSize: '24px', fill: '#000' });
   this.physics.add.existing(treat);
   treat.body.setAllowGravity(false);
+  treat.body.setImmovable(true);
   treat.setData('isTreat', true);
   treats.add(treat);
 }
