@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Soobi Runner - Procedural Edition</title>
+  <title>Soobi Runner - Final Edition</title>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
   <style>
     body { margin: 0; padding: 0; background: #fff; }
@@ -11,7 +11,7 @@
 </head>
 <body>
 <script>
-// Phaser configuration – using only black & white.
+// Phaser configuration – black & white, minimal design.
 const config = {
     type: Phaser.AUTO,
     width: 800,
@@ -33,15 +33,11 @@ let cursors;
 let confettiEmitter;
 
 function preload() {
-  // --- Create a minimal background ---
-  // We keep the background plain white and draw a thin ground line later.
-  // (No texture needed for the sky.)
-
-  // --- Create a detailed dog silhouette ---
-  // We generate two frames for a running animation.
-  let dogGraphics = this.make.graphics({ add: false });
+  // --- Create a plain background with a thin ground line later ---
   
-  // Frame 1: Draw a dog silhouette with a body, head, ear, and tail.
+  // --- Create the dog silhouette (Soobi) with two frames for running animation ---
+  let dogGraphics = this.make.graphics({ add: false });
+  // Frame 1:
   dogGraphics.fillStyle(0x000000, 1);
   // Draw body (rectangle)
   dogGraphics.fillRect(10, 20, 30, 20);
@@ -54,35 +50,35 @@ function preload() {
   dogGraphics.lineTo(55, 20);
   dogGraphics.closePath();
   dogGraphics.fillPath();
-  // Draw tail (a small rectangle on left)
+  // Draw tail (small rectangle on left)
   dogGraphics.fillRect(0, 28, 10, 4);
   dogGraphics.generateTexture('dog1', 60, 50);
   dogGraphics.clear();
   
-  // Frame 2: Slight variation (head lowered a bit) for animation.
+  // Frame 2: Variation (head slightly lower)
   dogGraphics.fillStyle(0x000000, 1);
-  dogGraphics.fillRect(10, 20, 30, 20);          // body
-  dogGraphics.fillCircle(48, 32, 8);               // head shifted down
-  dogGraphics.beginPath();                         // ear remains the same
+  dogGraphics.fillRect(10, 20, 30, 20);
+  dogGraphics.fillCircle(48, 32, 8);
+  dogGraphics.beginPath();
   dogGraphics.moveTo(45, 20);
   dogGraphics.lineTo(50, 10);
   dogGraphics.lineTo(55, 20);
   dogGraphics.closePath();
   dogGraphics.fillPath();
-  dogGraphics.fillRect(0, 28, 10, 4);              // tail
+  dogGraphics.fillRect(0, 28, 10, 4);
   dogGraphics.generateTexture('dog2', 60, 50);
   dogGraphics.destroy();
-
-  // --- Create a hurdle obstacle texture ---
+  
+  // --- Create a hurdle texture (obstacle) ---
   let hurdleGraphics = this.make.graphics({ add: false });
   hurdleGraphics.fillStyle(0x000000, 1);
   // Draw a base rectangle for the hurdle.
   hurdleGraphics.fillRect(0, 10, 30, 20);
-  // Draw a curved top (simulate a semicircular top).
+  // Draw a curved top (simulate with a semicircle).
   hurdleGraphics.fillCircle(15, 10, 15);
   hurdleGraphics.generateTexture('hurdle', 30, 30);
   hurdleGraphics.destroy();
-
+  
   // --- Create a confetti texture (a small square) ---
   let confettiGraphics = this.make.graphics({ add: false });
   confettiGraphics.fillStyle(0x000000, 1);
@@ -92,7 +88,7 @@ function preload() {
 }
 
 function create() {
-  // --- Create the ground (a thin black line) ---
+  // --- Create the ground as a thin black line ---
   ground = this.add.rectangle(400, 150, 800, 5, 0x000000);
   this.physics.add.existing(ground, true);
   
@@ -101,6 +97,7 @@ function create() {
   soobi.setCollideWorldBounds(true);
   soobi.body.setSize(60, 50);
   soobi.setGravityY(1200);
+  // Running animation using the two frames.
   this.anims.create({
     key: 'run',
     frames: [
@@ -111,13 +108,15 @@ function create() {
     repeat: -1
   });
   soobi.anims.play('run', true);
+  
+  // Enable collision between Soobi and the ground.
   this.physics.add.collider(soobi, ground);
   
   // --- Create groups for obstacles (hurdles) and treats ---
   obstacles = this.physics.add.group();
   treats = this.physics.add.group();
   
-  // Spawn hurdles every 2000ms (easy pacing).
+  // Spawn hurdles every 2000ms.
   this.time.addEvent({
     delay: 2000,
     callback: spawnObstacle,
@@ -125,7 +124,7 @@ function create() {
     loop: true
   });
   
-  // Spawn treats every 3000ms.
+  // Spawn treats every 3000ms, placed on the ground.
   this.time.addEvent({
     delay: 3000,
     callback: spawnTreat,
@@ -133,16 +132,16 @@ function create() {
     loop: true
   });
   
-  // --- Set up score and message text ---
+  // --- Set up score and message texts ---
   scoreText = this.add.text(600, 10, 'Treats: 0', { fontSize: '20px', fill: '#000' });
-  messageText = this.add.text(200, 80, 'Happy Birthday SOOBI!', { fontSize: '24px', fill: '#000' });
+  messageText = this.add.text(200, 80, '', { fontSize: '24px', fill: '#000' });
   messageText.visible = false;
   
   // --- Set up collisions ---
   this.physics.add.overlap(soobi, obstacles, hitObstacle, null, this);
   this.physics.add.overlap(soobi, treats, collectTreat, null, this);
   
-  // --- Input: SPACE key and pointer (for mobile) trigger jump ---
+  // --- Input: SPACE key and pointer for jump ---
   cursors = this.input.keyboard.createCursorKeys();
   this.input.on('pointerdown', jump, this);
 }
@@ -150,9 +149,9 @@ function create() {
 function update() {
   if (gameOver) return;
   
-  // No scrolling background—plain white sky with a ground line.
+  // No scrolling background (plain white sky with ground line).
   
-  // Jump with SPACE if Soobi is on the ground.
+  // Jump with SPACE key if Soobi is on the ground.
   if (cursors.space.isDown && soobi.body.touching.down) {
     jump.call(this);
   }
@@ -160,7 +159,7 @@ function update() {
   // Move hurdles to the left.
   obstacles.children.iterate(function(child) {
     if (child) {
-      child.x -= 4; // slower movement for an easy game
+      child.x -= 6;
       if (child.x < -child.width) child.destroy();
     }
   });
@@ -168,7 +167,7 @@ function update() {
   // Move treats to the left.
   treats.children.iterate(function(child) {
     if (child) {
-      child.x -= 4;
+      child.x -= 6;
       if (child.x < -child.width) child.destroy();
     }
   });
@@ -176,20 +175,20 @@ function update() {
 
 function jump() {
   if (soobi.body.touching.down) {
-    soobi.setVelocityY(-500);
+    soobi.setVelocityY(-700);
   }
 }
 
 function spawnObstacle() {
-  // Create a hurdle obstacle using the generated texture.
+  // Create a hurdle obstacle at ground level.
   let obstacle = obstacles.create(800, 140, 'hurdle');
   obstacle.body.setAllowGravity(false);
   obstacle.setImmovable(true);
 }
 
 function spawnTreat() {
-  // Spawn a treat (🍗 emoji) at a random vertical position (not overlapping obstacles).
-  let treatY = Phaser.Math.Between(90, 130);
+  // Place the treat on the ground.
+  let treatY = 140; // near ground level
   let treat = this.add.text(800, treatY, '🍗', { fontSize: '24px', fill: '#000' });
   this.physics.add.existing(treat);
   treat.body.setAllowGravity(false);
@@ -198,15 +197,13 @@ function spawnTreat() {
 }
 
 function hitObstacle(soobi, obstacle) {
-  // When colliding with a hurdle, restart the game.
+  // On collision, stop the game and show "Game Over" message.
   gameOver = true;
   this.physics.pause();
   soobi.setTint(0xff0000);
-  setTimeout(() => { 
-    this.scene.restart();
-    gameOver = false;
-    score = 0;
-  }, 1000);
+  messageText.setText("Game Over");
+  messageText.visible = true;
+  // No restart – the game remains stopped.
 }
 
 function collectTreat(soobi, treat) {
@@ -214,9 +211,10 @@ function collectTreat(soobi, treat) {
     treat.destroy();
     score++;
     scoreText.setText('Treats: ' + score);
-    // End the game and celebrate after 50 treats are collected.
+    // End the game and celebrate when 50 treats are collected.
     if (score >= 50) {
       gameOver = true;
+      messageText.setText("Happy Birthday SOOBI!");
       messageText.visible = true;
       this.physics.pause();
       createConfetti.call(this);
@@ -225,7 +223,7 @@ function collectTreat(soobi, treat) {
 }
 
 function createConfetti() {
-  // Create a particle emitter for confetti using the generated 'confetti' texture.
+  // Create a particle emitter for confetti (black confetti for B&W).
   let particles = this.add.particles('confetti');
   confettiEmitter = particles.createEmitter({
     x: { min: 0, max: 800 },
@@ -236,7 +234,7 @@ function createConfetti() {
     quantity: 10,
     scale: { start: 1, end: 0 },
     blendMode: 'NORMAL',
-    tint: [0x000000] // black confetti for a pure B&W feel
+    tint: [0x000000]
   });
   // Confetti falls indefinitely.
 }
