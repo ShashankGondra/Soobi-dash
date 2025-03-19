@@ -1,111 +1,176 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Soobi Runner Game</title>
-    <style>
-        * { margin: 0; padding: 0; }
-        body { text-align: center; background: white; font-family: Arial, sans-serif; }
-        canvas { background: lightgray; display: block; margin: 20px auto; }
-        #message { font-size: 24px; font-weight: bold; display: none; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Soobi Runner</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    body { text-align: center; background: white; font-family: sans-serif; }
+    canvas { background: white; display: block; margin: 20px auto; border: 1px solid #ddd; }
+    #score { font-size: 20px; margin: 10px; color: black; }
+    #message { font-size: 24px; font-weight: bold; color: black; display: none; }
+  </style>
 </head>
 <body>
-    <h1>Soobi Runner</h1>
-    <canvas id="gameCanvas" width="800" height="300"></canvas>
-    <p id="message">Happy Birthday SOOBI!</p>
-    
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
+  <h1 style="color:black;">Soobi Runner</h1>
+  <canvas id="gameCanvas" width="800" height="200"></canvas>
+  <div id="score">Treats: 0</div>
+  <div id="message">Happy Birthday SOOBI!</div>
 
-        let soobi = { x: 50, y: 200, width: 40, height: 40, velocityY: 0, jumping: false };
-        let obstacles = [];
-        let treats = [];
-        let score = 0;
-        let gameOver = false;
-        let gravity = 0.6;
-        let jumpStrength = -12;
-        let speed = 5;
-        let animationFrame = 0;
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-        function drawSoobi() {
-            ctx.fillStyle = "black";
-            ctx.fillRect(soobi.x, soobi.y, soobi.width, soobi.height);
+    // Game settings: tuned for smooth gameplay
+    let treatCount = 0;
+    let gameOver = false;
+    const gravity = 0.8;
+    const groundY = 150;
+    const speed = 6;
+
+    // Soobi: represented as a black rectangle (silhouette)
+    const soobi = {
+      x: 50,
+      y: groundY - 40,
+      width: 40,
+      height: 40,
+      velocityY: 0,
+      jumping: false
+    };
+
+    // Arrays for obstacles and treats
+    let obstacles = [];
+    let treats = [];
+
+    // Spawn an obstacle (black block resembling a cactus)
+    function spawnObstacle() {
+      const obs = {
+        x: canvas.width,
+        y: groundY - 20, // placed on the ground
+        width: 20,
+        height: 20
+      };
+      obstacles.push(obs);
+    }
+
+    // Spawn a treat: a 🍗 chicken leg piece using the emoji.
+    function spawnTreat() {
+      const treat = {
+        x: canvas.width,
+        y: groundY - 30,
+        size: 24  // emoji drawn with 24px font size
+      };
+      treats.push(treat);
+    }
+
+    // Spawning intervals: adjust as desired for gameplay pacing.
+    setInterval(() => { if (!gameOver) spawnObstacle(); }, 2000);
+    setInterval(() => { if (!gameOver) spawnTreat(); }, 2500);
+
+    // Jump function: triggers on SPACE key, touch, or click.
+    function jump() {
+      if (!soobi.jumping) {
+        soobi.velocityY = -15;
+        soobi.jumping = true;
+      }
+    }
+
+    // Listen for controls (keyboard, touch, click)
+    document.addEventListener("keydown", (e) => { if (e.code === "Space") jump(); });
+    document.addEventListener("touchstart", jump);
+    document.addEventListener("click", jump);
+
+    // Update game objects and physics
+    function update() {
+      if (gameOver) return;
+
+      // Update Soobi's position with gravity physics
+      soobi.y += soobi.velocityY;
+      soobi.velocityY += gravity;
+      if (soobi.y >= groundY - soobi.height) {
+        soobi.y = groundY - soobi.height;
+        soobi.jumping = false;
+      }
+
+      // Move obstacles and check collisions
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        obs.x -= speed;
+        // Collision detection (simple AABB)
+        if (
+          soobi.x < obs.x + obs.width &&
+          soobi.x + soobi.width > obs.x &&
+          soobi.y < obs.y + obs.height &&
+          soobi.y + soobi.height > obs.y
+        ) {
+          gameOver = true;
+          alert("Game Over!");
+          location.reload();
         }
+        if (obs.x + obs.width < 0) obstacles.splice(i, 1);
+      }
 
-        function drawObstacles() {
-            ctx.fillStyle = "red";
-            obstacles.forEach(obs => ctx.fillRect(obs.x, obs.y, obs.width, obs.height));
+      // Move treats and check for collection
+      for (let i = treats.length - 1; i >= 0; i--) {
+        const treat = treats[i];
+        treat.x -= speed;
+        if (
+          soobi.x < treat.x + treat.size &&
+          soobi.x + soobi.width > treat.x &&
+          soobi.y < treat.y + treat.size &&
+          soobi.y + soobi.height > treat.y
+        ) {
+          treatCount++;
+          document.getElementById("score").textContent = "Treats: " + treatCount;
+          treats.splice(i, 1);
+          if (treatCount >= 50) {
+            document.getElementById("message").style.display = "block";
+          }
         }
+        if (treat.x + treat.size < 0) treats.splice(i, 1);
+      }
+    }
 
-        function drawTreats() {
-            ctx.fillStyle = "gold";
-            treats.forEach(treat => ctx.fillRect(treat.x, treat.y, 10, 10));
-        }
+    // Draw the game objects on the canvas
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        function update() {
-            if (gameOver) return;
+      // Draw the ground line
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.lineTo(canvas.width, groundY);
+      ctx.strokeStyle = "black";
+      ctx.stroke();
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawSoobi();
-            drawObstacles();
-            drawTreats();
+      // Draw Soobi (the dog)
+      ctx.fillStyle = "black";
+      ctx.fillRect(soobi.x, soobi.y, soobi.width, soobi.height);
 
-            // Smooth jumping physics
-            soobi.y += soobi.velocityY;
-            soobi.velocityY += gravity;
-            if (soobi.y >= 200) {
-                soobi.y = 200;
-                soobi.jumping = false;
-            }
+      // Draw obstacles
+      ctx.fillStyle = "black";
+      obstacles.forEach(obs => {
+        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+      });
 
-            // Smooth obstacle movement
-            obstacles.forEach(obs => {
-                obs.x -= speed;
-                if (obs.x + obs.width < 0) obs.x = canvas.width + Math.random() * 200;
-                if (soobi.x < obs.x + obs.width && soobi.x + soobi.width > obs.x && soobi.y + soobi.height > obs.y) {
-                    gameOver = true;
-                    alert("Game Over!");
-                    location.reload();
-                }
-            });
+      // Draw treats as the 🍗 emoji
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "24px sans-serif";
+      treats.forEach(treat => {
+        ctx.fillText("🍗", treat.x + treat.size / 2, treat.y + treat.size / 2);
+      });
+    }
 
-            // Smooth treat movement
-            treats.forEach((treat, index) => {
-                treat.x -= speed;
-                if (treat.x + 10 < 0) treat.x = canvas.width + Math.random() * 500;
-                if (soobi.x < treat.x + 10 && soobi.x + soobi.width > treat.x && soobi.y + soobi.height > treat.y) {
-                    score++;
-                    treats.splice(index, 1);
-                }
-            });
+    // The game loop, using requestAnimationFrame for smooth animation
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
 
-            // Score display
-            ctx.fillStyle = "black";
-            ctx.fillText("Score: " + score, 700, 20);
-
-            if (score >= 50) document.getElementById("message").style.display = "block";
-
-            animationFrame++;
-            requestAnimationFrame(update);
-        }
-
-        function jump() {
-            if (!soobi.jumping) {
-                soobi.velocityY = jumpStrength;
-                soobi.jumping = true;
-            }
-        }
-
-        window.addEventListener("keydown", (e) => { if (e.code === "Space") jump(); });
-        window.addEventListener("click", jump);
-
-        for (let i = 0; i < 3; i++) obstacles.push({ x: 400 + i * 300, y: 240, width: 30, height: 30 });
-        for (let i = 0; i < 5; i++) treats.push({ x: 500 + i * 400, y: 230 });
-
-        update();
-    </script>
+    // Start the game loop
+    gameLoop();
+  </script>
 </body>
 </html>
