@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soobi's Treat Collector</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background-color: #87CEEB; /* Light blue sky */
+    }
+    #game {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+    }
+    #soobi {
+      position: absolute;
+      bottom: 50px;
+      left: 50px;
+      width: 60px;
+      height: 60px;
+      background-image: url('https://img.icons8.com/color/96/dog.png'); /* Dog image */
+      background-size: cover;
+    }
+    .treat {
+      position: absolute;
+      bottom: 50px;
+      width: 30px;
+      height: 30px;
+      background-image: url('https://img.icons8.com/color/48/dog-bone.png'); /* Treat image */
+      background-size: cover;
+    }
+    .obstacle {
+      position: absolute;
+      bottom: 50px;
+      width: 40px;
+      height: 40px;
+      background-image: url('https://img.icons8.com/color/48/rock.png'); /* Obstacle image */
+      background-size: cover;
+    }
+    #score {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 24px;
+      color: white;
+    }
+    #message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      color: white;
+      text-align: center;
+      display: none;
+    }
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: #ff0;
+      animation: fall linear infinite;
+    }
+    @keyframes fall {
+      0% { transform: translateY(0) rotate(0deg); }
+      100% { transform: translateY(100vh) rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div id="soobi"></div>
+    <div id="score">Treats: 0</div>
+    <div id="message">Happy 5th Birthday Soobi!</div>
+  </div>
+
+  <script>
+    const soobi = document.getElementById('soobi');
+    const scoreElement = document.getElementById('score');
+    const messageElement = document.getElementById('message');
+    let score = 0;
+    let gameSpeed = 2;
+    let obstacleInterval = 1000;
+
+    // Jump function
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !soobi.classList.contains('jump')) {
+        soobi.classList.add('jump');
+        setTimeout(() => {
+          soobi.classList.remove('jump');
+        }, 500);
+      }
+    });
+
+    // Generate treats and obstacles
+    const generateObstacle = () => {
+      const obstacle = document.createElement('div');
+      obstacle.classList.add('obstacle');
+      obstacle.style.left = `${window.innerWidth}px`;
+      document.getElementById('game').appendChild(obstacle);
+
+      const move = setInterval(() => {
+        const obstacleLeft = parseFloat(obstacle.style.left);
+
+        obstacle.style.left = `${obstacleLeft - gameSpeed}px`;
+
+        // Collision detection
+        const soobiRect = soobi.getBoundingClientRect();
+        const obstacleRect = obstacle.getBoundingClientRect();
+
+        if (obstacleRect.left < soobiRect.right && obstacleRect.right > soobiRect.left &&
+            obstacleRect.bottom > soobiRect.top && obstacleRect.top < soobiRect.bottom) {
+          alert('Game Over! Soobi hit an obstacle.');
+          location.reload();
+        }
+
+        if (obstacleLeft < -40) obstacle.remove();
+      }, 10);
+    };
+
+    const generateTreat = () => {
+      const treat = document.createElement('div');
+      treat.classList.add('treat');
+      treat.style.left = `${window.innerWidth}px`;
+      treat.style.bottom = `${50 + Math.random() * 50}px`;
+      document.getElementById('game').appendChild(treat);
+
+      const move = setInterval(() => {
+        const treatLeft = parseFloat(treat.style.left);
+
+        treat.style.left = `${treatLeft - gameSpeed}px`;
+
+        // Collision detection
+        const soobiRect = soobi.getBoundingClientRect();
+        const treatRect = treat.getBoundingClientRect();
+
+        if (treatRect.left < soobiRect.right && treatRect.right > soobiRect.left &&
+            treatRect.bottom > soobiRect.top && treatRect.top < soobiRect.bottom) {
+          score++;
+          scoreElement.textContent = `Treats: ${score}`;
+          treat.remove();
+        }
+
+        if (treatLeft < -30) treat.remove();
+
+        // Win condition
+        if (score >= 50) {
+          messageElement.style.display = 'block';
+          startConfetti();
+          clearInterval(move);
+        }
+      }, 10);
+    };
+
+    // Increase difficulty over time
+    const increaseDifficulty = () => {
+      gameSpeed += 0.5;
+      obstacleInterval = Math.max(500, obstacleInterval - 100);
+    };
+
+    setInterval(generateTreat, 1000);
+    setInterval(generateObstacle, obstacleInterval);
+    setInterval(increaseDifficulty, 5000);
+
+    // Confetti animation
+    const startConfetti = () => {
+      for (let i = 0; i < 100; i++) {
+        const confetti = document.createElement('div');
+        confetti.classList.add('confetti');
+        confetti.style.left = `${Math.random() * 100}vw`;
+        confetti.style.animationDuration = `${Math.random() * 2 + 1}s`;
+        confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+        document.getElementById('game').appendChild(confetti);
+      }
+    };
+  </script>
+</body>
+</html>
